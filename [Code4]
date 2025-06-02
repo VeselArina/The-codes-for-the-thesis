@@ -1,0 +1,230 @@
+from collections import defaultdict
+import itertools
+from itertools import product
+
+def chain_of_transpositions(n, chain):
+    '''
+    Перемножает цепочку траспозиций и записывает полученную перестановку в привычном виде
+    [1, 2, ... n] -> [p(1), p(2), ..., p(n)]
+    :param n: из Sn
+    :param chain: последовательность(цепочка) транспозиций
+    :return: перестановка в виде [p(1), p(2), ..., p(n)]
+    '''
+    sigma = [i + 1 for i in range(n)]
+    for transposition in chain[::-1]:
+        sigma[transposition[0] - 1], sigma[transposition[1] - 1] = sigma[transposition[1] - 1], sigma[
+            transposition[0] - 1]
+    new_sigma = [i + 1 for i in range(n)]
+    for item in sigma:
+        new_sigma[item - 1] = sigma.index(item) + 1
+    # print(sigma)
+    return new_sigma
+
+
+def sigma_2_x_sigma_1(sigma2, sigma1):
+    '''
+    Композиция двух перестановок, записанных в привычном виде [i1, i2,...,in]
+    :param sigma1: первая перестановка(справа)
+    :param sigma2: вторая перестановка(слева)
+    :return: result результирующая перестановка
+    '''
+    n = len(sigma1)
+    result = [i+1 for i in range(n)]
+    for item in range(n):
+        result[item] = sigma2[sigma1[item] - 1]
+    return result
+
+
+def cyclic_type(sigma):
+    '''
+    По перестановке определяет её циклический тип
+    :param sigma: перестановка, записанная в виде [p(1), p(2), ..., p(n)]
+    :return: циклический тип в виде массива
+    '''
+    n = len(sigma)
+    not_vizited = [i + 1 for i in range(n)]
+    result = []
+    index = 1
+    while sum(result) != n:
+        cycle = []
+        while index not in cycle:
+            cycle.append(index)
+            not_vizited.remove(index)
+            if sigma[index-1] not in cycle:
+                index = sigma[index-1]
+            else:
+                result.append(len(cycle))
+                if len(not_vizited) != 0:
+                    index = not_vizited[0]
+                break
+    return sorted(result)
+
+
+def generate_transposition_chains(n, d):
+    """
+    Генерирует все наборы длины d транспозиций в S_n, где вторые элементы не убывают.
+    :param n: Размер перестановки (int)
+    :param d: Длина набора транспозиций (int)
+    :return: Список наборов транспозиций (list[list[tuple[int]]])
+    """
+    # Генерация всех возможных транспозиций (i, j), где i < j
+    transpositions = [(i, j) for i in range(1, n + 1) for j in range(i + 1, n + 1)]
+
+    # Рекурсивная функция для генерации наборов транспозиций
+    def backtrack(sequence, last_j):
+        if len(sequence) == d:
+            result.append(sequence.copy()[::-1])
+            return
+        for (i, j) in transpositions:
+            if j >= last_j:
+                sequence.append((i, j))
+                backtrack(sequence, j)
+                sequence.pop()
+    result = []
+    backtrack([], 0)
+    return result
+
+
+def signature_of_chain(chain):
+    '''
+    Находит сигнатуру пути - цепочки транспозиций
+    :param chain: цепочка траспозиций
+    :return: массив с сигнатурой
+    '''
+    count_second_item = defaultdict(int)
+    for item in chain:
+        count_second_item[item[1]] += 1
+    # print(count_second_item)
+    return sorted(list(count_second_item.values()))
+
+
+# группировка цепочек транспозиций по сигнатуре
+def group_by_signature(transp_chains):
+    result = defaultdict(list)
+    for chain in transp_chains:
+        signature = signature_of_chain(chain)
+        result[str(signature)].append(chain)
+    return dict(result)
+
+
+def generate_transpositions(n):
+    """Генерирует все транспозиции в S_n."""
+    return [(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
+
+
+def generate_transposition_sequences(n, d):
+    """Генерирует все последовательности из d транспозиций в S_n."""
+    transpositions = generate_transpositions(n)
+    result = [list(i) for i in list(product(transpositions, repeat=d))]
+    return result
+
+
+def group_by_cyclic_type(n, transpozitions_chains):
+    result = defaultdict(list)
+    for chain in transpozitions_chains:
+        permutation = chain_of_transpositions(n, chain)
+        cyc = cyclic_type(permutation)
+        result[str(cyc)].append(chain)
+    return dict(result)
+
+
+def permute(nums):
+    def backtrack(start, end):
+        if start == end and nums[:] not in permutations:
+            # Добавляем копию текущей перестановки в результат
+            permutations.append(nums[:])
+        for i in range(start, end):
+            # Пропускаем дублирующиеся элементы
+            if i != start and nums[i] == nums[start]:
+                continue
+            # Меняем местами элементы nums[start] и nums[i]
+            nums[start], nums[i] = nums[i], nums[start]
+            # Рекурсивно вызываем backtrack для следующего элемента
+            backtrack(start + 1, end)
+            # Возвращаем элементы на место
+            nums[start], nums[i] = nums[i], nums[start]
+
+    # Сортируем массив для корректного пропускания дубликатов
+    nums.sort()
+    permutations = []
+    backtrack(0, len(nums))
+    return permutations
+
+def find_transposition_path(end):
+    start = sorted(end)[::-1]
+    path = []
+    for i in range(len(end)):
+        elem = end[i]
+        index = start[i:].index(elem) + i
+        for j in range(index, i, -1):
+#             print(j)
+            path.append([j-1, j])
+            start[j-1], start[j] = start[j], start[j-1]
+    return path
+
+
+def change_transpositions(t0, t1):
+#     print(t0, t1)
+    if len(set(t0 + t1)) == 4:
+        return [t1, t0]
+    elif len(set(t0 + t1)) == 3:
+        a1 = sorted(list(set(t0 + t1)))[0]
+        a2 = sorted(list(set(t0 + t1)))[1]
+        a3 = sorted(list(set(t0 + t1)))[2]
+        
+        if t0 == [a1, a2] and t1 == [a1, a3]:
+            return [[a2, a3], [a1, a2]]
+        elif t0 == [a1, a2] and t1 == [a2, a3]:
+            return [[a1, a3], [a1, a2]]
+        elif t0 == [a1, a3] and t1 == [a1, a2]:
+            return [[a1, a2], [a2, a3]]
+        elif t0 == [a2, a3] and t1 == [a1, a2]:
+            return [[a1, a2], [a1, a3]]
+        else:
+            print("bred")
+    else:
+        print("bred2")
+
+
+def find_permutations(order_chain):
+    result = []
+    last_elems = [i[1] for i in order_chain]
+    last_permutations = permute(last_elems)
+    for permut in last_permutations:
+        order_chain_copy = order_chain.copy()
+        path = find_transposition_path(permut)
+#         print(order_chain_copy, permut, path)
+        for t in path:
+            t0 = list(order_chain_copy[t[0]])
+            t1 = list(order_chain_copy[t[1]])
+            t0_new = change_transpositions(t0, t1)[0]
+            t1_new = change_transpositions(t0, t1)[1]
+            order_chain_copy[t[0]], order_chain_copy[t[1]] = t0_new, t1_new
+        result.append([list(i) for i in order_chain_copy])
+#         print(order_chain_copy)
+    return result
+
+
+def func(signature, d, mu):
+  n = sum(mu)
+  sign_and_order_cahins = {}
+  for chain in generate_transposition_chains(n, d):
+    sign_and_order_cahins[str(signature_of_chain(chain))] = []
+
+
+  for chain in generate_transposition_chains(n, d):
+    sign_and_order_cahins[str(signature_of_chain(chain))].append(chain)
+
+  signature_order_chains = sign_and_order_cahins[str(signature)]
+  # print(signature_order_chains)
+  result = []
+  for order_chain in signature_order_chains:
+    # print()
+    if cyclic_type(chain_of_transpositions(n, order_chain)) == mu:
+      for chain in find_permutations(order_chain):
+        result.append(chain)
+        print("rez", order_chain, chain)
+  return result
+
+
+
