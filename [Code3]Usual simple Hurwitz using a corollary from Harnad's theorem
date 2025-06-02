@@ -1,0 +1,194 @@
+from collections import defaultdict
+import itertools
+from itertools import product
+
+def chain_of_transpositions(n: int, chain: list[tuple[int]]) -> list[int]:
+    '''
+    Перемножает цепочку траспозиций и записывает полученную перестановку в привычном виде
+    [1, 2, ... n] -> [p(1), p(2), ..., p(n)]
+    :param n: из Sn
+    :param chain: последовательность(цепочка) транспозиций
+    :return: перестановка в виде [p(1), p(2), ..., p(n)]
+    '''
+    sigma = [i + 1 for i in range(n)]
+    for transposition in chain[::-1]:
+        sigma[transposition[0] - 1], sigma[transposition[1] - 1] = sigma[transposition[1] - 1], sigma[
+            transposition[0] - 1]
+    new_sigma = [i + 1 for i in range(n)]
+    for item in sigma:
+        new_sigma[item - 1] = sigma.index(item) + 1
+    # print(sigma)
+    return new_sigma
+
+
+def sigma_2_x_sigma_1(sigma2: list[int], sigma1: list[int]) -> list[int]:
+    '''
+    Композиция двух перестановок, записанных в привычном виде [i1, i2,...,in]
+    :param sigma1: первая перестановка(справа)
+    :param sigma2: вторая перестановка(слева)
+    :return: result результирующая перестановка
+    '''
+    n = len(sigma1)
+    result = [i+1 for i in range(n)]
+    for item in range(n):
+        result[item] = sigma2[sigma1[item] - 1]
+    return result
+
+def cyclic_type(sigma: list[int]) -> list[int]:
+    '''
+    По перестановке определяет её циклический тип
+    :param sigma: перестановка, записанная в виде [p(1), p(2), ..., p(n)]
+    :return: циклический тип в виде массива
+    '''
+    n = len(sigma)
+    not_vizited = [i + 1 for i in range(n)]
+    result = []
+    index = 1
+    while sum(result) != n:
+        cycle = []
+        while index not in cycle:
+            cycle.append(index)
+            not_vizited.remove(index)
+            if sigma[index-1] not in cycle:
+                index = sigma[index-1]
+            else:
+                result.append(len(cycle))
+                if len(not_vizited) != 0:
+                    index = not_vizited[0]
+                break
+    return sorted(result)
+
+
+def generate_transposition_chains(n: int, d: int) -> list[list[tuple[int]]]:
+    """
+    Генерирует все наборы длины d транспозиций в S_n, где вторые элементы не убывают.
+    :param n: Размер перестановки (int)
+    :param d: Длина набора транспозиций (int)
+    :return: Список наборов транспозиций (list[list[tuple[int]]])
+    """
+    # Генерация всех возможных транспозиций (i, j), где i < j
+    transpositions = [(i, j) for i in range(1, n + 1) for j in range(i + 1, n + 1)]
+
+    # Рекурсивная функция для генерации наборов транспозиций
+    def backtrack(sequence, last_j):
+        if len(sequence) == d:
+            result.append(sequence.copy()[::-1])
+            return
+        for (i, j) in transpositions:
+            if j >= last_j:
+                sequence.append((i, j))
+                backtrack(sequence, j)
+                sequence.pop()
+    result = []
+    backtrack([], 0)
+    return result
+
+
+
+def signature_of_chain(chain):
+    '''
+    Находит сигнатуру пути - цепочки транспозиций
+    :param chain: цепочка траспозиций
+    :return: массив с сигнатурой
+    '''
+    count_second_item = defaultdict(int)
+    for item in chain:
+        count_second_item[item[1]] += 1
+    # print(count_second_item)
+    return sorted(list(count_second_item.values()))
+
+
+# группировка цепочек транспозиций по сигнатуре
+def group_by_signature(transp_chains: list[list[tuple[int]]]) -> dict[str]:
+    result = defaultdict(list)
+    for chain in transp_chains:
+        signature = signature_of_chain(chain)
+        result[str(signature)].append(chain)
+    return dict(result)
+
+
+# учимся переставлять транспозиции в цепочке согласно второму элементу
+def trying(chain):
+    result = []
+    second_items_in_order = []
+
+    for item in chain:
+        second_items_in_order.append(item[1])
+    # получаем массив с котрежами - перестановками
+    permutations_of_chain = list(set(list(itertools.permutations(second_items_in_order))))
+
+    # вспомогательная функция
+    def find_first(num, tuples_list):
+        for t in tuples_list:
+            if t[1] == num:
+                return t
+        return None
+
+    # возвращаем транспозиции на их места в перестановке
+    set_of_second_items = set(second_items_in_order)
+    for perm in permutations_of_chain:
+        pre_result = []
+        copy_of_chain = [i for i in chain]
+        for jtem in perm:
+            tau = find_first(jtem, copy_of_chain)
+            copy_of_chain.remove(tau)
+            pre_result.append(tau)
+        result.append(pre_result)
+    # for i in range(len(result)):
+    #     # print(permutations_of_chain[i], result[i])
+    return result
+
+
+def generate_transpositions(n):
+    """Генерирует все транспозиции в S_n."""
+    return [(i, j) for i in range(1, n) for j in range(i + 1, n + 1)]
+
+
+def generate_transposition_sequences(n, d):
+    """Генерирует все последовательности из d транспозиций в S_n."""
+    transpositions = generate_transpositions(n)
+    result = [list(i) for i in list(product(transpositions, repeat=d))]
+    return result
+
+
+def group_by_cyclic_type(n:int, transpozitions_chains: list[list[tuple[int]]]):
+    result = defaultdict(list)
+    for chain in transpozitions_chains:
+        permutation = chain_of_transpositions(n, chain)
+        cyc = cyclic_type(permutation)
+        result[str(cyc)].append(chain)
+    return dict(result)
+
+mu1 = input('Укажите циклический тип mu (разбиение) в виде "1 1 2 3" через пробел:').split()
+mu = [int(i) for i in mu1]
+mu.sort()
+m = int(input('Введите количество транспозиций d:'))
+
+
+# cгенерируем простое число Гурвица
+def usual_simple_Hurwitz_number(mu, d):
+  n = sum(mu)
+  factorial = 1
+  for i in range(n):
+    factorial = factorial * (i+1)
+  #generate_transposition_chains(n: int, d: int)
+  monoton_chains = generate_transposition_chains(n, d)
+  grouped_by_cyc_monoton_chains = group_by_cyclic_type(n, monoton_chains)
+  # возьмем монотонные наборы, дающие сус mu
+  monoton_chains_cyc_1_3 = grouped_by_cyc_monoton_chains[str(mu)]
+  # сгруппируем их по разбиению lambda
+  monoton_chains_group_by_signature = group_by_signature(monoton_chains_cyc_1_3)
+  # сгенерирую для каждой цепочки из монотонных ее пересталенные наборы
+  monoton_perestav = []
+  for monoton_chain in monoton_chains_cyc_1_3:
+    pre_rez = trying(monoton_chain)
+    for rez in pre_rez:
+      monoton_perestav.append(rez)
+  # print(monoton_perestav)
+  # cгенерируем все цепочки из 4 транспоз, дающие сус mu
+  chains = generate_transposition_sequences(n, d)    #generate_transposition_sequences(n, d)
+  chains_group_by_cyc = group_by_cyclic_type(n, chains)
+  chains_cyc_1_3 = chains_group_by_cyc[str(mu)]
+  return len(chains_cyc_1_3)/factorial
+
+print(usual_simple_Hurwitz_number(mu, m))
