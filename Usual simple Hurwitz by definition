@@ -1,0 +1,124 @@
+#функция перемножает транспозиции
+def sigm(n, m, tr):
+    while m > 0:
+        m = m - 1
+        per = tr[m]
+        first_ind = per[0] - 1
+        first_elem = n[first_ind]
+        second_ind = per[1] - 1
+        second_elem = n[second_ind]
+        n[first_ind] = second_elem
+        n[second_ind] = first_elem
+    return n
+
+
+#функция раскладывает перестановку в произведение независимых циклов
+def find_cicl(n, d, mu):
+    rez = []
+    povtor = []
+    for i in range(len(d)):
+        vrem = []
+        flag = 1
+        if d[i] not in povtor:
+            povtor.append(d[i])
+            vrem.append(d[i])
+            if d[i] != n[i]:
+                vrem.append(n[i])
+                povtor.append(n[i])
+            g = d[i]
+            p = n[i]
+            while flag == 1:
+                s = d.index(p)
+                g = d[s]
+                p = n[s]
+
+                if p not in vrem:
+                    vrem.append(p)
+                    povtor.append(p)
+                else:
+                    rez.append(vrem)
+                    flag = 0
+    # print('rez = ', rez)
+    cikl_type =[]
+    for i in range(len(rez)):
+        cikl_type.append(len(rez[i]))
+    cikl_type.sort()
+    if cikl_type == mu:
+        return 1
+    else:
+        return 0
+
+
+
+
+
+
+                                   #I ввод данных и обработка
+
+mu = input('Укажите циклический тип mu (разбиение) в виде "1 1 2 3" через пробел:').split()
+for i in range(len(mu)):
+    mu[i] = int(mu[i])
+mu.sort()
+
+m = int(input('Введите количество транспозиций d:'))
+
+f = sum(mu)
+l = (f * (f - 1))/2     #столько транспозиций в группе перестановок из f элементов
+k = []
+
+factorial = 1
+for i in range(f):
+    factorial = factorial * (i+1)
+
+for i in range(f):
+    k.append(i+1)
+k = k[:-1]
+
+                                  # II поиск всех транспозиций
+vse_transpos = []
+for i in range(f-1):
+    for j in k:
+        t = []
+        t.append(i+1)
+        t.append(j+1)
+        vse_transpos.append(t)
+    k = k[1:]
+
+             #III переставляем по-разному транспозиции и смотрим, произведение каких дает верный циклический тип
+import itertools
+combo_transpos = []
+combo = itertools.combinations_with_replacement(vse_transpos,m)
+for i in combo:
+    w = list(i)
+    ravnue = 0
+    for i1 in range(m):
+        if w[0] == w[i1]:
+            ravnue += 1
+        else:
+            break
+    if ravnue != m:
+        perestanovki = itertools.permutations(list(i))
+        for j in perestanovki:
+            combo_transpos.append(list(j))
+    else:
+        combo_transpos.append(w)
+right_combo_transpos = []
+for i in combo_transpos:
+    if i not in right_combo_transpos:
+        right_combo_transpos.append(i)
+
+
+result = 0
+for i in range(len(right_combo_transpos)):
+    # print('hi')
+    # print(i+1, right_combo_transpos[i])
+    z = []
+    for j in range(f):
+        z.append(j + 1)
+    n = sigm(z, m, right_combo_transpos[i])
+    z = []
+    for j in range(f):
+        z.append(j + 1)
+    result += find_cicl(n, z, mu)
+
+print('Простое число Гурвица = ', result/factorial)
