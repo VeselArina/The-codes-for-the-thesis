@@ -1,0 +1,338 @@
+import itertools
+
+
+def vse_perestanovki(l):
+    p = []
+    for i in range(l):
+        p.append(i+1)
+
+    #создаю массив со всеми перестановками
+
+    perestanovki = []
+    fign = itertools.permutations(p)
+    for i in fign:
+        perestanovki.append(list(i))
+    return perestanovki
+
+
+# функция перемножения двух многочленов
+def multiplication(poli1, poli2):
+    rez = []
+    podobie = []
+    for i in range(len(poli1)):
+        for j in range(len(poli2)):
+            s1 = poli1[i]
+            
+            s2 = poli2[j]
+            
+            slag = {}
+            slag[0] = s1[0] * s2[0]
+            s1_keys = list(s1.keys())
+
+            s2_keys = list(s2.keys())
+
+            slag_keys = list(set(s1_keys + s2_keys))
+            
+            for k in range(len(slag_keys)-1):
+                key = slag_keys[k+1]
+                if slag_keys[k + 1] not in s1_keys:
+                    slag[key] = s2[key]
+                elif slag_keys[k + 1] not in s2_keys:
+                    slag[key] = s1[key]
+                else:
+                    slag[key] = s1[key] + s2[key]
+            povtor = {}
+            for c in range(len(slag_keys) - 1):
+                povtor[slag_keys[c+1]] = slag[slag_keys[c+1]]
+            if povtor in podobie:
+                index_podobnogo = podobie.index(povtor)
+                rez[index_podobnogo][0] += slag[0]
+            else:
+                rez.append(slag)
+                podobie.append(povtor)
+    rez_wo_nulls = []
+    for monom in rez:
+        if monom[0] != 0:
+            rez_wo_nulls.append(monom)
+    if rez_wo_nulls == []:
+        return [{0:0}]
+    else:
+        return rez_wo_nulls
+
+
+#функция приведения подобных слагаемых
+def podobie(polinom):
+    rez = []
+    podob_keys = []
+    rez_rez = []
+    for i in range(len(polinom)):
+        polinom_keys = list(set(polinom[i].keys()))[1:]
+        podob = {}
+        for j in range(len(polinom_keys)):
+            podob[polinom_keys[j]] = polinom[i][polinom_keys[j]]
+        if podob not in podob_keys:
+            podob_keys.append(podob)
+            rez.append(polinom[i])
+        else:
+            ind = podob_keys.index(podob)
+            rez[ind][0] += polinom[i][0]
+    for i in range(len(rez)):
+        if rez[i][0] != 0:
+            rez_rez.append(rez[i])
+    return rez_rez
+
+
+#функция сложения двух многочленов
+def addition(poli1, poli2):
+    rez = poli1 + poli2
+    rez = podobie(rez)
+    return rez
+
+
+
+# функция создания р1+р2+...+рk, для заданного k
+def create_polinom(k):
+    polinom = []
+    for i in range(k):
+        monom = {0: 1/(i+1), i+1: 1}
+        polinom.append(monom)
+    return polinom
+
+
+#функия, возводящая многочлен в степень k
+def degree(polinom, k):
+    polinom_0 = polinom
+    for i in range(k-1):
+        polinom = multiplication(polinom, polinom_0)
+    return polinom
+
+#функция, создающая факториал
+def factorial(a):
+    fact = 1
+    for i in range(a):
+        fact = fact * (i+1)
+    return fact
+
+
+
+#функция, создающая словарь {1: [s1], 2: [s2],..., k: [sk]} для заданного k
+def create_sk(k):
+    razlozhenie_v_ryad = []
+    polinom = create_polinom(k)
+
+    kvazi = {}
+    for i1 in range(k):
+        i = i1 + 1
+        kvazi[i] = []
+        slag = degree(polinom, i)
+        for j in range(len(slag)):
+            slag[j][0] = slag[j][0]/factorial(i)
+        razlozhenie_v_ryad += slag
+    for i in range(len(razlozhenie_v_ryad)):
+        slag_keys = list(razlozhenie_v_ryad[i].keys())
+        kvazi_degr = 0
+        for j in range(len(slag_keys)):
+            kvazi_degr += slag_keys[j] * razlozhenie_v_ryad[i][slag_keys[j]]
+        if kvazi_degr <= k:
+            kvazi[kvazi_degr].append(razlozhenie_v_ryad[i])
+    return kvazi
+
+
+
+
+#функция razbivatel, которая выдает массив со всеми разбиениями (состоит из двух функций). Принимает число, которое надо разбить
+def razbienie_n(last):
+    new_razbienie = []
+    for i in range(len(last)):
+        for j in range(len(last[i])):
+            if j == 0:
+                razbiv = [last[i][0] + 1] + last[i][1:]
+                new_razbienie.append(razbiv)
+            elif last[i][j] < last[i][j - 1]:
+                razbiv = last[i][:j] + [last[i][j] + 1] + last[i][(j + 1):]
+                new_razbienie.append(razbiv)
+    new_razbienie.append([1] * ((last[0][0]) + 1))
+    rez = []
+    for r in new_razbienie:
+        if r not in rez:
+            rez.append(r)
+    return rez
+
+
+#функция, которая выдает рабиения
+def razbivatel(n):
+    begining = [[1]]
+    for i in range(n-1):
+        begining = razbienie_n(begining)
+    return begining
+
+
+# функция, создающая матрицу с индексами mu(i)  для заданного разбиения mu то есть на вход принимает массив с разбиением
+def matr_ind(raz):
+    mat_of_ind = []
+    for i in range(len(raz)):
+        mat_of_ind.append([])
+    for i in range(len(mat_of_ind)):
+        i1 = i+1
+        for j in range(len(raz)):
+            j1 = j+1
+            mat_of_ind[i].append(raz[i] - i1 + j1)
+    return mat_of_ind
+
+
+#функция, которая принимает на вход разбиение и выдает для него матрицу из sk
+def matr_sk(matr):
+    mat_of_sk = []
+    matr = matr_ind(matr)
+    h = max(matr[0])
+    dict_sk = create_sk(h)
+    for i in range(len(matr)):
+        mat_of_sk.append([])
+    for i in range(len(mat_of_sk)):
+        for j in range(len(matr)):
+            mon = matr[i][j]
+            if mon < 0:
+                mat_of_sk[i].append([{0: 0}])
+            elif mon == 0:
+                mat_of_sk[i].append([{0: 1}])
+            else:
+                mat_of_sk[i].append(dict_sk[mon])
+    return mat_of_sk
+
+
+
+#функция, определяющая знак перестановки
+def signum(perestanovka):
+    n = len(perestanovka)
+    vizited = []
+    rez = []
+    for i in range(n):
+        vizited.append(0)
+    for i in range(n):
+        len_cikla = 0
+        if vizited[i] == 0:
+            vizited[i] = 1
+            len_cikla += 1
+            flag = 1
+            a = i
+            while flag == 1:
+                if vizited[perestanovka[a]-1] == 1:
+                    flag = 0
+                else:
+                    vizited[perestanovka[a]-1] = 1
+                    len_cikla += 1
+                    a = perestanovka[a] - 1
+        if len_cikla != 0:
+            rez.append(len_cikla)
+    chetnost = n - len(rez)
+    if chetnost % 2 == 0:
+        return 1
+    else:
+        return -1
+
+
+#функция считает определеитель от матрицы из многочленов от p_1, p_2,....
+def determ(mat_sk):
+    dett = []
+    n = len(mat_sk)
+    perestanovki_n = vse_perestanovki(n)
+    for i in range(len(perestanovki_n)):
+        sigma = perestanovki_n[i]
+        slagg = 0
+        k = 0
+        while k != n:
+            if slagg == 0:
+                slagg = mat_sk[k][sigma[k] - 1]
+            else:
+                slagg1 = multiplication(slagg, mat_sk[k][sigma[k] - 1])
+                slagg = slagg1
+            k += 1
+        slagg = multiplication(slagg, [{0: signum(sigma)}])
+        if len(dett) == 0:
+            dett = slagg
+        else:
+            dett = addition(dett, slagg)
+    return dett
+
+
+#считает smu(1, 0, 0...)
+def dim(razbiv):
+    result = 0
+    result_dict = [{}]
+    polli = determ(matr_sk(razbiv))
+    for i in range(len(polli)):
+        deturm_keys = list(polli[i].keys())
+        if deturm_keys == [0, 1]:
+            result += polli[i][0]
+    result_dict[0][0] = result
+    return result_dict
+
+
+#функция, которая считает Ymu 
+def y(mu):
+    diagr = []
+    for i in range(len(mu)):
+        stroka = []
+        for j in range(mu[i]):
+            stroka.append((j+1)-(i+1))
+        diagr.append(stroka)
+    summ = 0
+    for i in range(len(diagr)):
+        summ += sum(diagr[i])
+    return summ
+
+
+def gurvic(m, mu):
+    count = 0
+    n = sum(mu)
+    rarbieniya = razbivatel(n)
+    ryad = []
+    for rarbienie in rarbieniya:
+        count += 1
+        stepen_pri_u = y(rarbienie)
+        koef_pri_u_m = stepen_pri_u**m
+        
+        koef_dim = dim(rarbienie)
+        
+        s_mu = determ(matr_sk(rarbienie))
+        
+        
+        chlen_ryada = multiplication([{0:koef_pri_u_m*koef_dim[0][0]}], s_mu)
+        
+        ryad.append(chlen_ryada)
+        
+    summa = [{0 : 0}]
+    
+    for chlen_ryada in ryad:
+        summa = addition(summa, chlen_ryada)
+        
+    mu_dict = {}
+    for mu_i in mu:
+        mu_dict[mu_i] = 0
+    for mu_i in mu:
+        mu_dict[mu_i] += 1
+        
+    find = False
+    for monom in summa:
+        number = monom[0]
+        del monom[0]
+        if monom == mu_dict:
+            find = True
+            gurvic_number = number
+            break
+    if find == False:
+        gurvic_number = 0
+    
+    return gurvic_number
+
+
+#ввод данных
+razbienie_itog = input('Введите разбиение через пробел в виде "1 1 3 4":').split()
+mm = int(input('Введите количество транспозиций:'))
+for i in range(len(razbienie_itog)):
+    razbienie_itog[i] = int(razbienie_itog[i])
+    
+razbienie_itog.sort(reverse=True)
+
+#вывод данных
+print('Простое число Гурвица =', gurvic(mm, razbienie_itog))
